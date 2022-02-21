@@ -1,25 +1,52 @@
+import org.apache.lucene.analysis.standard.StandardAnalyzer
+import org.apache.lucene.index.{DirectoryReader, IndexNotFoundException}
+import org.apache.lucene.search.{IndexSearcher, TopDocs}
+import org.apache.lucene.store.FSDirectory
+import org.apache.lucene.util.QueryBuilder
+
 import java.io.File
+import java.nio.file.Paths
 
 class LuceneSearchEngine extends Indexer {
+
+  private final val MAXHITS = 100
   /**
    * get the directory of data
    * @param filePath path of the directory
    */
-  def getDataDirectory(filePath:String): Unit ={
+  def getDataDirectory(filePath:String): String ={
     val logger = new Logger
     logger.logWritter("info","Entered in to getDataDirectory function in LuceneSearchEngine class")
     logger.startTime()
-    val dataFile = new File(filePath)
-    if(checkFiles(dataFile)){
-      indexString(dataFile)
+    if(filePath.nonEmpty){
+      val dataFile = new File(filePath)
+      if(checkFiles(dataFile)){
+        indexString(dataFile)
+      }
+      else {
+        removeIndexDir()
+        logger.logWritter("error","Please check the directory")
+      }
+      logger.stopTime()
+      logger.logWritter("info","Execution time for getDataDirectory is  " + logger.getTime)
+      logger.logWritter("info","Exiting from getDataDirectory function in LuceneSearchEngine class")
+      "index file created"
     }
     else {
-      logger.logWritter("error","Please check the file path")
+      removeIndexDir()
+      logger.logWritter("error","file path is empty")
+      logger.stopTime()
+      logger.logWritter("info","Execution time for getDataDirectory is  " + logger.getTime)
+      logger.logWritter("info","Exiting from getDataDirectory function in LuceneSearchEngine class")
+      try{
+        throw new NullPointerException
+      }
+      catch {
+        case _: NullPointerException =>  "file path is empty"
+      }
     }
-    logger.stopTime()
-    logger.logWritter("info","Execution time for getDataDirectory is  " + logger.getTime)
-    logger.logWritter("info","Exiting from getDataDirectory function in LuceneSearchEngine class")
   }
+
 
   /**
    * check the file permission and the file exists or not
@@ -30,7 +57,7 @@ class LuceneSearchEngine extends Indexer {
     val logger = new Logger
     logger.logWritter("info","Entered in to checkFiles function in LuceneSearchEngine class")
     logger.startTime()
-    if(!file.isHidden && file.exists() && file.canRead){
+    if(!file.isHidden && file.exists() && file.canRead && file.listFiles().length != 0){
       logger.stopTime()
       logger.logWritter("info","Execution time for checkFiles is  " + logger.getTime)
       logger.logWritter("info","Exiting from checkFiles function in LuceneSearchEngine class")
@@ -42,6 +69,54 @@ class LuceneSearchEngine extends Indexer {
       logger.logWritter("info","Exiting from checkFiles function in LuceneSearchEngine class")
       false
     }
-
   }
+
+  /**
+   * search the text with it index and returns the files containing the text
+   * @param queryStr query text for searching
+   * @return
+   */
+  def searchIndex(queryStr: String): String = {
+    val logger = new Logger
+    logger.logWritter("info","Entered in to searchIndex function in LuceneSearchEngine class")
+    logger.startTime()
+    val directory = FSDirectory.open(Paths.get(INDEXDIRECTORYPATH))
+    var indexReader : DirectoryReader = null
+    try{
+      indexReader = DirectoryReader.open(directory)
+    }
+    catch {
+      case _ : IndexNotFoundException => return "Index file not found"
+    }
+    val searcher = new IndexSearcher(indexReader)
+    val analyzer = new StandardAnalyzer()
+    val builder = new QueryBuilder(analyzer)
+    val query = builder.createPhraseQuery("content", queryStr)
+    var topDocs : TopDocs = null
+    try{
+      topDocs = searcher.search(query, MAXHITS)
+    }
+    catch {
+      case _: NullPointerException => return "search query is empty"
+    }
+    val hits = topDocs.scoreDocs
+    var searchedFiles = ""
+    for (i <- 0 until hits.length) {
+      val docId = hits(i).doc
+      val d = searcher.doc(docId)
+      searchedFiles += s"${i + 1}" + d.get("fileName") + " Score :" + hits(i).score + "\n"
+    }
+    logger.stopTime()
+    logger.logWritter("info","Execution time for searchIndex is  " + logger.getTime)
+    logger.logWritter("info","Exiting from searchIndex function in LuceneSearchEngine class")
+    logger.logWritter("info","total hits founded is " + hits.length)
+    searchedFiles
+  }
+}
+
+object LuceneSearchEngineObj extends App {
+  val lucene = new LuceneSearchEngine
+  println(lucene.getDataDirectory("dataFiles"))
+
+  println(lucene.searchIndex("paragraphs"))
 }

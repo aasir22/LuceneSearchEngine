@@ -7,13 +7,13 @@ import java.io.{File, FileReader}
 import java.nio.file.{Files, Paths}
 
 class Indexer {
-  private final val INDEXDIRECTORYPATH = "indexDir"
+  protected final val INDEXDIRECTORYPATH = "indexDir"
 
   /**
    * Indexing the files in the given directory
    * @param dataDir filePath
    */
-  def indexString(dataDir:File): Unit ={
+  protected def indexString(dataDir:File): Unit ={
     val logger = new Logger
     logger.logWritter("info","Entered in to indexString function in Indexer class")
     logger.startTime()
@@ -39,7 +39,7 @@ class Indexer {
   /**
    * removes the indexDir if its exists
    */
-  private def removeIndexDir(): Unit ={
+  protected def removeIndexDir(): Unit ={
     val logger = new Logger
     logger.logWritter("info","Entered in to removeIndexDir function in Indexer class")
     logger.startTime()
