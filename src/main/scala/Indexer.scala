@@ -13,43 +13,47 @@ class Indexer {
   /**
    * Indexing the files in the given directory
    * @param dataDir filePath
+   * @param canRemoveIndex remove index file or not
    */
-  protected def index(dataDir:File): Unit ={
+  protected def index(dataDir:File,canRemoveIndex:Boolean): Unit ={
     val logger = new Logger
     logger.logWritter("info","Entered in to indexString function in Indexer class")
-    logger.startTime()
-    removeIndexDir()
-    // create a directory in the given path
-    val indexDir = Files.createDirectory(Paths.get(INDEXDIRECTORYPATH))
-    // removes all the stop words
-    val analyzer = new StandardAnalyzer()
-    // contains all the configuration that is used to create Index Writer
-    // create a new config with the given analyzer
-    val config = new IndexWriterConfig(analyzer)
-    // creates indexes during indexing process.
-    val indexWriter = new IndexWriter(FSDirectory.open(indexDir),config)
-    // list of all files name
-    val files = dataDir.listFiles()
-    try{
-      for (f <- files) {
-        // virtual documents with Fields
-        // Fields is an object contains the content from the physical document
-        val doc = new Document()
-        // Field that contains text
-        doc.add (new TextField("content", new FileReader (f)))
-        // Stored Fields are not indexed so it can't searchable
-        doc.add (new StoredField("fileName", f.getCanonicalPath))
-        indexWriter.addDocument(doc)
+    if(canRemoveIndex) {
+      logger.startTime ()
+      removeIndexDir ()
+      // create a directory in the given path
+      val indexDir = Files.createDirectory (Paths.get (INDEXDIRECTORYPATH))
+      // removes all the stop words
+      val analyzer = new StandardAnalyzer ()
+      // contains all the configuration that is used to create Index Writer
+      // create a new config with the given analyzer
+      val config = new IndexWriterConfig (analyzer)
+      // creates indexes during indexing process.
+      val indexWriter = new IndexWriter (FSDirectory.open (indexDir), config)
+      // list of all files name
+      val files = dataDir.listFiles ()
+      try {
+        for (f <- files) {
+          // virtual documents with Fields
+          // Fields is an object contains the content from the physical document
+          val doc = new Document ()
+          // Field that contains text
+          doc.add (new TextField ("content", new FileReader (f)))
+          // Stored Fields are not indexed so it can't searchable
+          doc.add (new StoredField ("fileName", f.getCanonicalPath))
+          indexWriter.addDocument (doc)
+        }
       }
+      catch {
+        case f: FileNotFoundException => throw f
+      }
+      logger.logWritter ("info", "Index files created")
+      indexWriter.close ()
+      logger.stopTime ()
+      logger.logWritter ("info", "Execution time for indexString is  " + logger.getTime + " ms")
+      logger.logWritter ("info", "Exiting from indexString function in Indexer class")
     }
-    catch {
-      case f:FileNotFoundException => throw f
-    }
-    logger.logWritter("info","Index files created")
-    indexWriter.close()
-    logger.stopTime()
-    logger.logWritter("info","Execution time for indexString is  " + logger.getTime+ " ms")
-    logger.logWritter("info","Exiting from indexString function in Indexer class")
+    logger.logWritter("info","search will use already presented index file")
   }
 
   /**

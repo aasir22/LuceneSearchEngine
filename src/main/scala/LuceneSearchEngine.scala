@@ -14,10 +14,10 @@ class LuceneSearchEngine extends Indexer {
 
   /**
    * get the directory of data
-   *
    * @param filePath path of the directory
+   * @param canRemoveOldIndex remove index or not
    */
-  def createIndexFiles(filePath: String): String = {
+  def createIndexFiles(filePath: String,canRemoveOldIndex:Boolean): String = {
     val logger = new Logger
     logger.logWritter ("info", "Entered in to getDataDirectory function in LuceneSearchEngine class")
     logger.startTime ()
@@ -25,7 +25,7 @@ class LuceneSearchEngine extends Indexer {
       val dataFile = new File (filePath)
       if (checkFiles (dataFile)) {
         try{
-          index(dataFile)
+          index(dataFile,canRemoveOldIndex)
         }
         catch {
           case _:FileNotFoundException => return "check the data"
@@ -124,6 +124,10 @@ class LuceneSearchEngine extends Indexer {
     for (i <- 0 until hits.length) {
       val docId = hits (i).doc
       val d = searcher.doc (docId)
+      println("*"*50)
+      val a = searcher.explain(query,docId)
+      println(a)
+      println("*"*50)
       searchedFiles += s"${i + 1}." + d.get("fileName") + " Score :" + hits(i).score + "\n"
     }
     logger.stopTime ()
@@ -207,6 +211,6 @@ class LuceneSearchEngine extends Indexer {
 
 object LuceneSearchEngineObj extends App {
   val lucene = new LuceneSearchEngine
-  println (lucene.createIndexFiles ("dataFiles"))
+  println (lucene.createIndexFiles ("dataFiles",canRemoveOldIndex = false))
   println (lucene.searchIndex ("diabetes"))
 }
