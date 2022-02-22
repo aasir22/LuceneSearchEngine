@@ -4,8 +4,9 @@ import org.apache.lucene.search.{FuzzyQuery, IndexSearcher, PrefixQuery, Query, 
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.QueryBuilder
 import org.apache.lucene.index.Term
+
 import scala.io.StdIn.readInt
-import java.io.File
+import java.io.{File, FileNotFoundException}
 import java.nio.file.Paths
 import java.util.InputMismatchException
 
@@ -25,7 +26,13 @@ class LuceneSearchEngine extends Indexer {
     if (filePath.nonEmpty) {
       val dataFile = new File (filePath)
       if (checkFiles (dataFile)) {
-        index(dataFile)
+        try{
+          index(dataFile)
+        }
+        catch {
+          case _:FileNotFoundException => return "check the data"
+        }
+
       }
       else {
         removeIndexDir ()
@@ -123,7 +130,7 @@ class LuceneSearchEngine extends Indexer {
     for (i <- 0 until hits.length) {
       val docId = hits (i).doc
       val d = searcher.doc (docId)
-      searchedFiles += s"${i + 1}" + d.get ("fileName") + " Score :" + hits(i).score + "\n"
+      searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits(i).score + "\n"
     }
     logger.stopTime ()
     logger.logWritter ("info", "Execution time for searchIndex is  " + logger.getTime+ " ms")
@@ -212,5 +219,5 @@ class LuceneSearchEngine extends Indexer {
 object LuceneSearchEngineObj extends App {
   val lucene = new LuceneSearchEngine
   println (lucene.createIndexFiles ("dataFiles"))
-  println (lucene.searchIndex ("tumor"))
+  println (lucene.searchIndex ("bone"))
 }

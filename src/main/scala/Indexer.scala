@@ -3,7 +3,8 @@ import org.apache.lucene.document.{Document, StoredField, TextField}
 import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
 import org.apache.lucene.store.FSDirectory
 import org.apache.commons.io.FileUtils
-import java.io.{File, FileReader}
+
+import java.io.{File, FileNotFoundException, FileReader}
 import java.nio.file.{Files, Paths}
 
 class Indexer {
@@ -29,15 +30,20 @@ class Indexer {
     val indexWriter = new IndexWriter(FSDirectory.open(indexDir),config)
     // list of all files name
     val files = dataDir.listFiles()
-    for (f <- files) {
-      // virtual documents with Fields
-      // Fields is an object contains the content from the physical document
-      val doc = new Document()
-      // Field that contains text
-      doc.add (new TextField("content", new FileReader (f)))
-      // Stored Fields are not indexed so it can't searchable
-      doc.add (new StoredField("fileName", f.getCanonicalPath))
-      indexWriter.addDocument(doc)
+    try{
+      for (f <- files) {
+        // virtual documents with Fields
+        // Fields is an object contains the content from the physical document
+        val doc = new Document()
+        // Field that contains text
+        doc.add (new TextField("content", new FileReader (f)))
+        // Stored Fields are not indexed so it can't searchable
+        doc.add (new StoredField("fileName", f.getCanonicalPath))
+        indexWriter.addDocument(doc)
+      }
+    }
+    catch {
+      case f:FileNotFoundException => throw f
     }
     logger.logWritter("info","Index files created")
     indexWriter.close()
