@@ -1,8 +1,6 @@
-import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.index.{DirectoryReader, IndexNotFoundException}
 import org.apache.lucene.search.{FuzzyQuery, IndexSearcher, PrefixQuery, Query, TermQuery, TopDocs, WildcardQuery}
 import org.apache.lucene.store.FSDirectory
-import org.apache.lucene.util.QueryBuilder
 import org.apache.lucene.index.Term
 
 import scala.io.StdIn.readInt
@@ -104,14 +102,10 @@ class LuceneSearchEngine extends Indexer {
     }
     // creating an instance of Index Searcher
     val searcher = new IndexSearcher (indexReader)
-    // removes the stop words
-    val analyzer = new StandardAnalyzer ()
-    // creates query from the analyzer
-    val builder = new QueryBuilder (analyzer)
     var query: Query = null
-    val searchType = getQueryType
     try {
-      query = getQuery (searchType, queryStr.toLowerCase, builder)
+      val searchType = getQueryType
+      query = getQuery (searchType, queryStr.toLowerCase)
     }
     catch {
       case _: InputMismatchException => return "Please give the correct search type"
@@ -130,7 +124,7 @@ class LuceneSearchEngine extends Indexer {
     for (i <- 0 until hits.length) {
       val docId = hits (i).doc
       val d = searcher.doc (docId)
-      searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits(i).score + "\n"
+      searchedFiles += s"${i + 1}." + d.get("fileName") + " Score :" + hits(i).score + "\n"
     }
     logger.stopTime ()
     logger.logWritter ("info", "Execution time for searchIndex is  " + logger.getTime+ " ms")
@@ -147,10 +141,9 @@ class LuceneSearchEngine extends Indexer {
    * create query from the query type
    * @param queryType type of query
    * @param queryStr  searching string
-   * @param builder   query builder
    * @return
    */
-  private def getQuery(queryType: String, queryStr: String, builder: QueryBuilder): Query = {
+  private def getQuery(queryType: String, queryStr: String): Query = {
     val logger = new Logger
     logger.logWritter ("info", "Entered in to getQuery function in LuceneSearchEngine class")
     logger.startTime ()
@@ -160,9 +153,6 @@ class LuceneSearchEngine extends Indexer {
         // search for the text it is case sensitive
         val term = new Term ("content", queryStr)
         query = new TermQuery (term)
-      case "phrasequery" =>
-        // search documents which contain a particular sequence of terms
-        query = builder.createPhraseQuery ("content", queryStr)
       case "wildcardquery" =>
         // wildcard characters are *,?
         val term = new Term ("content", queryStr)
@@ -190,18 +180,17 @@ class LuceneSearchEngine extends Indexer {
    */
   private def getQueryType: String = {
     println ("Please select any one in the types of query")
-    println (" 1. TermQuery\n 2. phrasequery\n 3. wildcardquery\n 4. prefixquery\n 5. fuzzyquery")
-    println ("give a number between 1 to 5 : ")
+    println (" 1. TermQuery\n 2. wildcardquery\n 3. prefixquery\n 4. fuzzyquery")
+    println ("give a number between 1 to 4 : ")
     var input: String = null
     try {
       input = readInt () match {
         case 1 => "termquery"
-        case 2 => "phrasequery"
-        case 3 => "wildcardquery"
-        case 4 => "prefixquery"
-        case 5 => "fuzzyquery"
+        case 2 => "wildcardquery"
+        case 3 => "prefixquery"
+        case 4 => "fuzzyquery"
         case _ =>
-          println ("please give the number within the range of 1 to 5")
+          println ("please give the number within the range of 1 to 4")
           throw new InputMismatchException
       }
     }
@@ -219,5 +208,5 @@ class LuceneSearchEngine extends Indexer {
 object LuceneSearchEngineObj extends App {
   val lucene = new LuceneSearchEngine
   println (lucene.createIndexFiles ("dataFiles"))
-  println (lucene.searchIndex ("bone"))
+  println (lucene.searchIndex ("diabetes"))
 }
