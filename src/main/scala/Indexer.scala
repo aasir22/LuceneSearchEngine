@@ -42,7 +42,7 @@ class Indexer {
     logger.logWritter("info","Index files created")
     indexWriter.close()
     logger.stopTime()
-    logger.logWritter("info","Execution time for indexString is  " + logger.getTime)
+    logger.logWritter("info","Execution time for indexString is  " + logger.getTime+ " ms")
     logger.logWritter("info","Exiting from indexString function in Indexer class")
   }
 
@@ -60,7 +60,7 @@ class Indexer {
       logger.logWritter("info",s"$INDEXDIRECTORYPATH removed")
     }
     logger.stopTime()
-    logger.logWritter("info","Execution time for removeIndexDir is  " + logger.getTime)
+    logger.logWritter("info","Execution time for removeIndexDir is  " + logger.getTime+ " ms")
     logger.logWritter("info","Exiting from removeIndexDir function in Indexer class")
   }
 }

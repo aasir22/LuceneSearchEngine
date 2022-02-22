@@ -32,7 +32,7 @@ class LuceneSearchEngine extends Indexer {
         logger.logWritter ("error", "Please check the directory")
       }
       logger.stopTime ()
-      logger.logWritter ("info", "Execution time for getDataDirectory is  " + logger.getTime)
+      logger.logWritter ("info", "Execution time for getDataDirectory is  " + logger.getTime + " ms")
       logger.logWritter ("info", "Exiting from getDataDirectory function in LuceneSearchEngine class")
       "index file created"
     }
@@ -40,7 +40,7 @@ class LuceneSearchEngine extends Indexer {
       removeIndexDir ()
       logger.logWritter ("error", "file path is empty")
       logger.stopTime ()
-      logger.logWritter ("info", "Execution time for getDataDirectory is  " + logger.getTime)
+      logger.logWritter ("info", "Execution time for getDataDirectory is  " + logger.getTime+ " ms")
       logger.logWritter ("info", "Exiting from getDataDirectory function in LuceneSearchEngine class")
       try {
         throw new NullPointerException
@@ -64,13 +64,13 @@ class LuceneSearchEngine extends Indexer {
     logger.startTime ()
     if (!file.isHidden && file.exists () && file.canRead && file.listFiles ().length != 0) {
       logger.stopTime ()
-      logger.logWritter ("info", "Execution time for checkFiles is  " + logger.getTime)
+      logger.logWritter ("info", "Execution time for checkFiles is  " + logger.getTime+ " ms")
       logger.logWritter ("info", "Exiting from checkFiles function in LuceneSearchEngine class")
       true
     }
     else {
       logger.stopTime ()
-      logger.logWritter ("info", "Execution time for checkFiles is  " + logger.getTime)
+      logger.logWritter ("info", "Execution time for checkFiles is  " + logger.getTime+ " ms")
       logger.logWritter ("info", "Exiting from checkFiles function in LuceneSearchEngine class")
       false
     }
@@ -123,10 +123,10 @@ class LuceneSearchEngine extends Indexer {
     for (i <- 0 until hits.length) {
       val docId = hits (i).doc
       val d = searcher.doc (docId)
-      searchedFiles += s"${i + 1}" + d.get ("fileName") + " Score :" + hits (i).score + "\n"
+      searchedFiles += s"${i + 1}" + d.get ("fileName") + " Score :" + hits(i).score + "\n"
     }
     logger.stopTime ()
-    logger.logWritter ("info", "Execution time for searchIndex is  " + logger.getTime)
+    logger.logWritter ("info", "Execution time for searchIndex is  " + logger.getTime+ " ms")
     logger.logWritter ("info", "Exiting from searchIndex function in LuceneSearchEngine class")
     logger.logWritter ("info", "total hits founded is " + hits.length)
     if (searchedFiles.isEmpty) {
@@ -171,7 +171,7 @@ class LuceneSearchEngine extends Indexer {
       case _ => throw new InputMismatchException ()
     }
     logger.stopTime ()
-    logger.logWritter ("info", "Execution time for getQuery is  " + logger.getTime)
+    logger.logWritter ("info", "Execution time for getQuery is  " + logger.getTime+ " ms")
     logger.logWritter ("info", "Exiting from getQuery function in LuceneSearchEngine class")
     query
   }
@@ -212,5 +212,5 @@ class LuceneSearchEngine extends Indexer {
 object LuceneSearchEngineObj extends App {
   val lucene = new LuceneSearchEngine
   println (lucene.createIndexFiles ("dataFiles"))
-  println (lucene.searchIndex ("aasi"))
+  println (lucene.searchIndex ("tumor"))
 }
