@@ -13,21 +13,31 @@ class Indexer {
    * Indexing the files in the given directory
    * @param dataDir filePath
    */
-  protected def indexString(dataDir:File): Unit ={
+  protected def index(dataDir:File): Unit ={
     val logger = new Logger
     logger.logWritter("info","Entered in to indexString function in Indexer class")
     logger.startTime()
     removeIndexDir()
+    // create a directory in the given path
     val indexDir = Files.createDirectory(Paths.get(INDEXDIRECTORYPATH))
+    // removes all the stop words
     val analyzer = new StandardAnalyzer()
+    // contains all the configuration that is used to create Index Writer
+    // create a new config with the given analyzer
     val config = new IndexWriterConfig(analyzer)
+    // creates indexes during indexing process.
     val indexWriter = new IndexWriter(FSDirectory.open(indexDir),config)
+    // list of all files name
     val files = dataDir.listFiles()
     for (f <- files) {
-      val doc = new Document ()
-      doc.add (new TextField ("content", new FileReader (f)))
-      doc.add (new StoredField ("fileName", f.getCanonicalPath))
-      indexWriter.addDocument (doc)
+      // virtual documents with Fields
+      // Fields is an object contains the content from the physical document
+      val doc = new Document()
+      // Field that contains text
+      doc.add (new TextField("content", new FileReader (f)))
+      // Stored Fields are not indexed so it can't searchable
+      doc.add (new StoredField("fileName", f.getCanonicalPath))
+      indexWriter.addDocument(doc)
     }
     logger.logWritter("info","Index files created")
     indexWriter.close()
@@ -45,6 +55,7 @@ class Indexer {
     logger.startTime()
     val indexFolder = new File(INDEXDIRECTORYPATH)
     if(indexFolder.exists()){
+      // if index folder already exists. It will delete the directory
       FileUtils.deleteDirectory(indexFolder)
       logger.logWritter("info",s"$INDEXDIRECTORYPATH removed")
     }
