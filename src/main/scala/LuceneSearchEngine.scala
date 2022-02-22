@@ -179,7 +179,7 @@ class LuceneSearchEngine extends Indexer {
 
   /**
    * get the input from the user about which query type they want to use
-   *
+
    * @return String of queryType
    */
   private def getQueryType: String = {
