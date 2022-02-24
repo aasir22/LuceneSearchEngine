@@ -1,8 +1,10 @@
+package com.lucenesearch
+
+import org.apache.commons.io.FileUtils
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.{Document, StoredField, TextField}
 import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
 import org.apache.lucene.store.FSDirectory
-import org.apache.commons.io.FileUtils
 
 import java.io.{File, FileNotFoundException, FileReader}
 import java.nio.file.{Files, Paths}
@@ -17,7 +19,7 @@ class Indexer {
    */
   protected def index(dataDir:File,canRemoveIndex:Boolean): Unit ={
     val logger = new Logger
-    logger.logWritter("info","Entered in to indexString function in Indexer class")
+    logger.logWritter("info","Entered in to indexString function in com.lucenesearch.Indexer class")
     if(canRemoveIndex) {
       logger.startTime ()
       removeIndexDir ()
@@ -51,7 +53,7 @@ class Indexer {
       indexWriter.close ()
       logger.stopTime ()
       logger.logWritter ("info", "Execution time for indexString is  " + logger.getTime + " ms")
-      logger.logWritter ("info", "Exiting from indexString function in Indexer class")
+      logger.logWritter ("info", "Exiting from indexString function in com.lucenesearch.Indexer class")
     }
     logger.logWritter("info","search will use already presented index file")
   }
@@ -61,7 +63,7 @@ class Indexer {
    */
   protected def removeIndexDir(): Unit ={
     val logger = new Logger
-    logger.logWritter("info","Entered in to removeIndexDir function in Indexer class")
+    logger.logWritter("info","Entered in to removeIndexDir function in com.lucenesearch.Indexer class")
     logger.startTime()
     val indexFolder = new File(INDEXDIRECTORYPATH)
     if(indexFolder.exists()){
@@ -71,6 +73,6 @@ class Indexer {
     }
     logger.stopTime()
     logger.logWritter("info","Execution time for removeIndexDir is  " + logger.getTime+ " ms")
-    logger.logWritter("info","Exiting from removeIndexDir function in Indexer class")
+    logger.logWritter("info","Exiting from removeIndexDir function in com.lucenesearch.Indexer class")
   }
 }
