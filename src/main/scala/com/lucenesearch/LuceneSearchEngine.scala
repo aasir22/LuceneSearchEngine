@@ -5,8 +5,9 @@ import org.apache.lucene.search.{BooleanClause, BooleanQuery, FuzzyQuery, IndexS
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
+//import org.apache.lucene.search.highlight.QueryTermExtractor
 
-import scala.io.StdIn.readInt
+
 import java.io.{File, FileNotFoundException}
 import java.nio.file.Paths
 import java.util.InputMismatchException
@@ -88,7 +89,7 @@ class LuceneSearchEngine extends Indexer {
    * @param queryStr query text for searching
    * @return
    */
-  def searchIndex(queryStr: String): String = {
+  def searchIndex(queryStr: String,queryType:String): String = {
     val logger = new Logger
     logger.logWritter ("info", "Entered in to searchIndex function in LuceneSearchEngine class")
     logger.startTime ()
@@ -105,8 +106,8 @@ class LuceneSearchEngine extends Indexer {
     val searcher = new IndexSearcher (indexReader)
     var query: Query = null
     try {
-      val searchType = getQueryType
-      query = getQuery (searchType, queryStr.toLowerCase)
+//      val searchType = getQueryType
+      query = getQuery (queryType.toLowerCase, queryStr.toLowerCase)
     }
     catch {
       case _: InputMismatchException => return "Please give the correct search type"
@@ -122,13 +123,12 @@ class LuceneSearchEngine extends Indexer {
     }
     val hits = topDocs.scoreDocs
     var searchedFiles = ""
+//    val terms = new QueryTermExtractor()
     for (i <- 0 until hits.length) {
       val docId = hits (i).doc
+      val explanation = searcher.explain (query, docId)
       val d = searcher.doc (docId)
-//      println("*"*50)
-//      val a = searcher.explain(query,docId)
-//      println(a)
-      println("*"*50)
+      println(explanation.toString.toArray.mkString)
       searchedFiles += s"${i + 1}." + d.get("fileName") + " Score :" + hits(i).score + "\n"
     }
     logger.stopTime ()
@@ -154,34 +154,36 @@ class LuceneSearchEngine extends Indexer {
     logger.startTime ()
     var query: Query = null
     queryType.toLowerCase match {
-      case "termquery" =>
+      case "termquery" | "term query" =>
         // search for the term in the file
         val term = new Term ("content", queryStr)
         query = new TermQuery(term)
-      case "wildcardquery" =>
+      case "wildcardquery" | "wildcard query" =>
         // wildcard characters are *,?
         val term = new Term ("content", queryStr)
         query = new WildcardQuery(term)
-      case "prefixquery" =>
+      case "prefixquery" | "prefix query" =>
         // searches the query which matches the given prefix
         val term = new Term ("content", queryStr)
         query = new PrefixQuery(term)
-      case "phrasequery" =>
+      case "phrasequery" | "phrase query" =>
         val queryArr = queryStr.split("~")
-        query = new PhraseQuery (1, "content", new BytesRef (queryArr(0)), new BytesRef (queryArr(1)))
-        println(query)
-      case "fuzzyquery" =>
+        if(queryArr.length > 1){
+          query = new PhraseQuery (1, "content", new BytesRef (queryArr(0)), new BytesRef (queryArr(1)))
+        }
+      case "fuzzyquery" | "fuzzy query" =>
         // search based on the similarities
         val term = new Term("content", queryStr)
         query = new FuzzyQuery(term)
-      case "andquery" =>
+        println(query)
+      case "andquery" | "and query"=>
         // search query based on the two or more quries must present in the file like AND operator
         val queryArr = queryStr.split ("@@")
         query = getAndOrQuery(queryArr,isAndQuery = true)
-      case "orquery" =>
+      case "orquery" | "or query" =>
         // search any one of query presents in the file
         val queryArr = queryStr.split("##")
-        query = getAndOrQuery(queryArr)
+          query = getAndOrQuery(queryArr)
       case _ => throw new InputMismatchException ()
     }
     logger.stopTime ()
@@ -219,52 +221,70 @@ class LuceneSearchEngine extends Indexer {
     query
   }
 
-  /**
-   * get the input from the user about which query type they want to use
-   * @return String of queryType
-   */
-  private def getQueryType: String = {
-    println ("Please select any one in the types of query\n")
-    println(
-      """1.Term Query        - search for a single word in the indexed files
-        |2.Wildcard Query    - it accepts wildcard characters(?*) ? matches one character * matches multiple characters ex.
-        |                      ex: ha?d it can find hand,hard....
-        |3.Prefix Query      - given query word matches any of the prefix word in the documents
-        |4.Fuzzy Query       - matches the similar words in the documents
-        |5.Phrase Query      - matches phrase of words. input should be like sweet~salt ex: Sweet as Salt
-        |6.And Query         - matches if the given two words present in the file. input should be sweet@@salt
-        |7.Or Query          - if any of the given inputs matches in file. input should be sweet##salt
-        |""".stripMargin)
-    println ("\n 1. TermQuery\n 2. wildcardquery\n 3. prefixquery\n 4. fuzzyquery \n 5. phrasequery\n 6. andquery\n 7. orquery")
-    println ("give a number between 1 to 7 : ")
-    var input: String = null
-    try {
-      input = readInt () match {
-        case 1 => "termquery"
-        case 2 => "wildcardquery"
-        case 3 => "prefixquery"
-        case 4 => "fuzzyquery"
-        case 5 => "phrasequery"
-        case 6 => "andquery"
-        case 7 => "orquery"
-        case _ =>
-          println ("please give the number within the range of 1 to 7")
-          throw new InputMismatchException
-      }
-    }
-    catch {
-      case _: NumberFormatException =>
-        println ("please give numbers without spaces")
-      case _: NullPointerException =>
-        println ("please don't give space while giving your option")
-      case _: InputMismatchException => println ("Please give the correct search type")
-    }
-    input
-  }
+//  /**
+//   * get the input from the user about which query type they want to use
+//   * @return String of queryType
+//   */
+//  private def getQueryType: String = {
+//    println ("Please select any one in the types of query\n")
+//    println(
+//      """1.Term Query        - search for a single word in the indexed files
+//        |2.Wildcard Query    - it accepts wildcard characters(?*) ? matches one character * matches multiple characters ex.
+//        |                      ex: ha?d it can find hand,hard....
+//        |3.Prefix Query      - given query word matches any of the prefix word in the documents
+//        |4.Fuzzy Query       - matches the similar words in the documents
+//        |5.Phrase Query      - matches phrase of words. input should be like sweet~salt ex: Sweet as Salt
+//        |6.And Query         - matches if the given two words present in the file. input should be sweet@@salt
+//        |7.Or Query          - if any of the given inputs matches in file. input should be sweet##salt
+//        |""".stripMargin)
+//    println(" 1. TermQuery\n 2. wildcardquery\n 3. prefixquery\n 4. fuzzyquery \n 5. phrasequery\n 6. andquery\n 7. orquery")
+//    println ("give a number between 1 to 7 : ")
+//    var input: String = null
+//    try {
+//      input = readInt () match {
+//        case 1 => "term query"
+//        case 2 => "wildcardquery"
+//        case 3 => "prefixquery"
+//        case 4 => "fuzzyquery"
+//        case 5 => "phrasequery"
+//        case 6 => "andquery"
+//        case 7 => "orquery"
+//        case _ =>
+//          println ("please give the number within the range of 1 to 7")
+//          throw new InputMismatchException
+//      }
+//    }
+//    catch {
+//      case _: NumberFormatException =>
+//        println ("please give numbers without spaces")
+//      case _: NullPointerException =>
+//        println ("please don't give space while giving your option")
+//      case _: InputMismatchException => println ("Please give the correct search type")
+//    }
+//    input
+//  }
 }
 
 object LuceneSearchEngineObj extends App {
   val lucene = new LuceneSearchEngine
-  println (lucene.createIndexFiles ("dataFiles",canRemoveOldIndex = false))
-  println (lucene.searchIndex("Aasir##Meeran"))
+  println (lucene.createIndexFiles ("dataFiles",canRemoveOldIndex = true))
+  println (lucene.searchIndex("leg","Term Query"))
+  println("term query")
+//  println("*"*50)
+//  println (lucene.searchIndex("tum*","wildcard Query"))
+//  println("wildcard query")
+//  println("*"*50)
+//  println (lucene.searchIndex("Hea","prefix Query"))
+//  println("prefix query")
+//  println("*"*50)
+//  println (lucene.searchIndex("pain","fuzzy Query"))
+//  println("fuzzy query")
+//  println("*"*50)
+//  println (lucene.searchIndex("heart~pain","phrase Query"))
+//  println("phrase query")
+//  println("*"*50)
+//  println (lucene.searchIndex("Head@@Heart","and Query"))
+//  println("and query")
+//  println("*"*50)
+//  println (lucene.searchIndex("leg##stomach","or Query"))
 }
