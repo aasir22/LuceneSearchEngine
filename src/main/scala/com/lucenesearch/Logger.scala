@@ -1,3 +1,5 @@
+package com.lucenesearch
+
 import com.typesafe.scalalogging
 import com.typesafe.scalalogging.Logger
 import org.apache.commons.lang3.time.StopWatch
