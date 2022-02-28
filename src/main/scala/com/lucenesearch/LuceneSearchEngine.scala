@@ -5,6 +5,7 @@ import org.apache.lucene.search.{BooleanClause, BooleanQuery, FuzzyQuery, IndexS
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
+
 import java.io.{File, FileNotFoundException}
 import java.nio.file.Paths
 import java.util.InputMismatchException
@@ -103,7 +104,7 @@ class LuceneSearchEngine extends Indexer {
     val searcher = new IndexSearcher (indexReader)
     var query: Query = null
     try {
-      //      val searchType = getQueryType
+//      val searchType = getQueryType
       query = getQuery (queryType.toLowerCase, queryStr.toLowerCase)
     }
     catch {
@@ -180,7 +181,7 @@ class LuceneSearchEngine extends Indexer {
       case "orquery" | "or query" =>
         // search any one of query presents in the file
         val queryArr = queryStr.split("##")
-        query = getAndOrQuery(queryArr)
+          query = getAndOrQuery(queryArr)
       case _ => throw new InputMismatchException ()
     }
     logger.stopTime ()

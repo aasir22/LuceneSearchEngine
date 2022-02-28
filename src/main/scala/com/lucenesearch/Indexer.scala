@@ -39,15 +39,15 @@ class Indexer {
       try {
         for (f <- files) {
           val openFile = Source.fromFile(f)
-          //          val fileContents = openFile.getLines
+//          val fileContents = openFile.getLines
           // virtual documents with Fields
           // Fields is an object contains the content from the physical document
           val doc = new Document ()
-          //          for(lines <- fileContents){
-          //            lines.split(" ").toList.foreach(v => doc.add(new Field("content",v,TextField.TYPE_STORED)))
-          //            doc.add (new Field ("content",lines,TextField.TYPE_STORED))
-          ////            splitted = splitted.tail
-          //          }
+//          for(lines <- fileContents){
+//            lines.split(" ").toList.foreach(v => doc.add(new Field("content",v,TextField.TYPE_STORED)))
+//            doc.add (new Field ("content",lines,TextField.TYPE_STORED))
+////            splitted = splitted.tail
+//          }
           // Field that contains text
           doc.add (new TextField("content", new FileReader(f)))
           // Stored Fields are not indexed so it can't searchable

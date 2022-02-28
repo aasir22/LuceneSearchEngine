@@ -9,7 +9,6 @@ class Logger {
   val logger: scalalogging.Logger = Logger("log")
   val stopWatch = new StopWatch("")
 
-
   /**
    * write the given log messages
    * @param logType log Level
