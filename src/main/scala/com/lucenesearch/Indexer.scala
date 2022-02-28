@@ -2,12 +2,13 @@ package com.lucenesearch
 
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.document.{Document, StoredField, TextField}
+import org.apache.lucene.document.{Document, Field, StoredField, StringField, TextField}
 import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
 import org.apache.lucene.store.FSDirectory
 
 import java.io.{File, FileNotFoundException, FileReader}
 import java.nio.file.{Files, Paths}
+import scala.io.Source
 
 class Indexer {
   protected final val INDEXDIRECTORYPATH = "indexDir"
@@ -22,6 +23,7 @@ class Indexer {
     logger.logWritter("info","Entered in to indexString function in com.lucenesearch.Indexer class")
     if(canRemoveIndex) {
       logger.startTime ()
+      // removes the index directory
       removeIndexDir ()
       // create a directory in the given path
       val indexDir = Files.createDirectory (Paths.get (INDEXDIRECTORYPATH))
@@ -36,14 +38,22 @@ class Indexer {
       val files = dataDir.listFiles ()
       try {
         for (f <- files) {
+          val openFile = Source.fromFile(f)
+          //          val fileContents = openFile.getLines
           // virtual documents with Fields
           // Fields is an object contains the content from the physical document
           val doc = new Document ()
+          //          for(lines <- fileContents){
+          //            lines.split(" ").toList.foreach(v => doc.add(new Field("content",v,TextField.TYPE_STORED)))
+          //            doc.add (new Field ("content",lines,TextField.TYPE_STORED))
+          ////            splitted = splitted.tail
+          //          }
           // Field that contains text
-          doc.add (new TextField ("content", new FileReader (f)))
+          doc.add (new TextField("content", new FileReader(f)))
           // Stored Fields are not indexed so it can't searchable
-          doc.add (new StoredField ("fileName", f.getCanonicalPath))
+          doc.add (new StoredField ("fileName", f.getName))
           indexWriter.addDocument (doc)
+          openFile.close()
         }
       }
       catch {

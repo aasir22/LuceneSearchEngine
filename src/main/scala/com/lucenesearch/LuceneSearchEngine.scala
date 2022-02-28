@@ -5,16 +5,13 @@ import org.apache.lucene.search.{BooleanClause, BooleanQuery, FuzzyQuery, IndexS
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
-//import org.apache.lucene.search.highlight.QueryTermExtractor
-
-
 import java.io.{File, FileNotFoundException}
 import java.nio.file.Paths
 import java.util.InputMismatchException
 
 class LuceneSearchEngine extends Indexer {
 
-  private final val MAXHITS = 100
+  private final val MAXHITS = 10
 
   /**
    * get the directory of data
@@ -106,7 +103,7 @@ class LuceneSearchEngine extends Indexer {
     val searcher = new IndexSearcher (indexReader)
     var query: Query = null
     try {
-//      val searchType = getQueryType
+      //      val searchType = getQueryType
       query = getQuery (queryType.toLowerCase, queryStr.toLowerCase)
     }
     catch {
@@ -123,13 +120,13 @@ class LuceneSearchEngine extends Indexer {
     }
     val hits = topDocs.scoreDocs
     var searchedFiles = ""
-//    val terms = new QueryTermExtractor()
     for (i <- 0 until hits.length) {
       val docId = hits (i).doc
       val explanation = searcher.explain (query, docId)
       val d = searcher.doc (docId)
-      println(explanation.toString.toArray.mkString)
-      searchedFiles += s"${i + 1}." + d.get("fileName") + " Score :" + hits(i).score + "\n"
+      val getQuery = """content:[a-z 0-9]+""".r
+      val searchedQuery = getQuery.findAllMatchIn(explanation.toString).toArray
+      searchedFiles += s"${i + 1}." + d.get("fileName") + " Score :" + hits(i).score * 100 + " " + searchedQuery.mkString("Array(", ", ", ")") +"\n"
     }
     logger.stopTime ()
     logger.logWritter ("info", "Execution time for searchIndex is  " + logger.getTime+ " ms")
@@ -174,7 +171,7 @@ class LuceneSearchEngine extends Indexer {
       case "fuzzyquery" | "fuzzy query" =>
         // search based on the similarities
         val term = new Term("content", queryStr)
-        query = new FuzzyQuery(term)
+        query = new FuzzyQuery(term,2)
         println(query)
       case "andquery" | "and query"=>
         // search query based on the two or more quries must present in the file like AND operator
@@ -183,7 +180,7 @@ class LuceneSearchEngine extends Indexer {
       case "orquery" | "or query" =>
         // search any one of query presents in the file
         val queryArr = queryStr.split("##")
-          query = getAndOrQuery(queryArr)
+        query = getAndOrQuery(queryArr)
       case _ => throw new InputMismatchException ()
     }
     logger.stopTime ()
@@ -220,71 +217,28 @@ class LuceneSearchEngine extends Indexer {
     logger.logWritter ("info", "Exiting from getAndOrQuery function in LuceneSearchEngine class")
     query
   }
-
-//  /**
-//   * get the input from the user about which query type they want to use
-//   * @return String of queryType
-//   */
-//  private def getQueryType: String = {
-//    println ("Please select any one in the types of query\n")
-//    println(
-//      """1.Term Query        - search for a single word in the indexed files
-//        |2.Wildcard Query    - it accepts wildcard characters(?*) ? matches one character * matches multiple characters ex.
-//        |                      ex: ha?d it can find hand,hard....
-//        |3.Prefix Query      - given query word matches any of the prefix word in the documents
-//        |4.Fuzzy Query       - matches the similar words in the documents
-//        |5.Phrase Query      - matches phrase of words. input should be like sweet~salt ex: Sweet as Salt
-//        |6.And Query         - matches if the given two words present in the file. input should be sweet@@salt
-//        |7.Or Query          - if any of the given inputs matches in file. input should be sweet##salt
-//        |""".stripMargin)
-//    println(" 1. TermQuery\n 2. wildcardquery\n 3. prefixquery\n 4. fuzzyquery \n 5. phrasequery\n 6. andquery\n 7. orquery")
-//    println ("give a number between 1 to 7 : ")
-//    var input: String = null
-//    try {
-//      input = readInt () match {
-//        case 1 => "term query"
-//        case 2 => "wildcardquery"
-//        case 3 => "prefixquery"
-//        case 4 => "fuzzyquery"
-//        case 5 => "phrasequery"
-//        case 6 => "andquery"
-//        case 7 => "orquery"
-//        case _ =>
-//          println ("please give the number within the range of 1 to 7")
-//          throw new InputMismatchException
-//      }
-//    }
-//    catch {
-//      case _: NumberFormatException =>
-//        println ("please give numbers without spaces")
-//      case _: NullPointerException =>
-//        println ("please don't give space while giving your option")
-//      case _: InputMismatchException => println ("Please give the correct search type")
-//    }
-//    input
-//  }
 }
 
 object LuceneSearchEngineObj extends App {
   val lucene = new LuceneSearchEngine
   println (lucene.createIndexFiles ("dataFiles",canRemoveOldIndex = true))
-  println (lucene.searchIndex("leg","Term Query"))
+  println (lucene.searchIndex("tumor","term query"))
   println("term query")
-//  println("*"*50)
-//  println (lucene.searchIndex("tum*","wildcard Query"))
-//  println("wildcard query")
-//  println("*"*50)
-//  println (lucene.searchIndex("Hea","prefix Query"))
-//  println("prefix query")
-//  println("*"*50)
-//  println (lucene.searchIndex("pain","fuzzy Query"))
-//  println("fuzzy query")
-//  println("*"*50)
-//  println (lucene.searchIndex("heart~pain","phrase Query"))
-//  println("phrase query")
-//  println("*"*50)
-//  println (lucene.searchIndex("Head@@Heart","and Query"))
-//  println("and query")
-//  println("*"*50)
-//  println (lucene.searchIndex("leg##stomach","or Query"))
+  println("*"*50)
+  println (lucene.searchIndex("he?rt","wildcard Query"))
+  println("wildcard query")
+  println("*"*50)
+  println (lucene.searchIndex("Hea","prefix Query"))
+  println("prefix query")
+  println("*"*50)
+  println (lucene.searchIndex("health","fuzzy Query"))
+  println("fuzzy query")
+  println("*"*50)
+  println (lucene.searchIndex("immune~system","phrase Query"))
+  println("phrase query")
+  println("*"*50)
+  println (lucene.searchIndex("blood@@tumor","and Query"))
+  println("and query")
+  println("*"*50)
+  println (lucene.searchIndex("leg##stomach","or Query"))
 }
