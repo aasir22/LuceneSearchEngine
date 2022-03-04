@@ -1,15 +1,18 @@
 package com.lucenesearch
 
+import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.index.{DirectoryReader, IndexNotFoundException}
-import org.apache.lucene.search.{BooleanClause, BooleanQuery, FuzzyQuery, IndexSearcher, PhraseQuery, PrefixQuery, Query, TermQuery, TopDocs, WildcardQuery}
+import org.apache.lucene.search.{BooleanClause, BooleanQuery, FuzzyQuery, IndexSearcher, Matches, MatchesIterator, PhraseQuery, PrefixQuery, Query, TermQuery, TopDocs, WildcardQuery}
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
-
+import org.apache.lucene.search.uhighlight.UnifiedHighlighter
+import org.apache.lucene.search.highlight.QueryTermExtractor
 import java.io.{File, FileNotFoundException}
 import java.nio.file.Paths
+import java.util
 import java.util.InputMismatchException
-import javax.swing.text.Document
+import scala.collection.mutable.ArrayBuffer
 import scala.io.StdIn.readLine
 
 class LuceneSearchEngine extends Indexer {
@@ -53,7 +56,6 @@ class LuceneSearchEngine extends Indexer {
 
   /**
    * check the file permission and the file exists or not
-   *
    * @param file as File
    * @return true or false
    */
@@ -115,15 +117,39 @@ class LuceneSearchEngine extends Indexer {
     catch {
       case _: NullPointerException => return "search query is empty"
     }
+    val arr = Array("wildcard query","wildcardquery","prefixquery","prefix query","phrase query","phrasequery")
     val hits = topDocs.scoreDocs
     var searchedFiles = ""
     for (i <- 0 until hits.length) {
       val docId = hits (i).doc
       val explanation = searcher.explain (query, docId)
+//      println(explanation)
       val d = searcher.doc(docId)
-      val getQuery = """content:["a-z?*]+ ?""".r
-      val searchedQuery = getQuery.findAllMatchIn (explanation.toString).toArray
-      searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits (i).score + " " + searchedQuery.mkString ("Array(", ", ", ")").stripMargin + "\n"
+//      val regExplain = """content:[A-Za-z]+""".r
+//      val regExQueryExtract = """content:""".r
+//      val queryValues = regExplain.findAllMatchIn(explanation.toString).toArray
+//      val matchedQuery = queryValues.map(x=>regExQueryExtract.replaceAllIn(x.toString(),""))
+//      searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits (i).score + " " + matchedQuery.mkString ("Array(", ", ", ")") + "\n"
+
+      if(arr.contains(queryType)){
+        val analyzer = new StandardAnalyzer ()
+        val highlighter = new UnifiedHighlighter(searcher, analyzer)
+        val fragments = highlighter.highlight("content",query,topDocs)
+        val arrBuffer = new ArrayBuffer[String]
+        val regExOfFragments = """<[/b]+>""".r
+        for (f <- fragments) {
+          arrBuffer.addOne(regExOfFragments.replaceAllIn(f,"").toArray.mkString)
+        }
+        searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits (i).score + " " + arrBuffer.distinct.toArray.mkString ("Array(", ", ", ")") + "\n"
+      }
+      else {
+        val regExplain = """content:[A-Za-z]+""".r
+        val regExQueryExtract = """content:""".r
+        val queryValues = regExplain.findAllMatchIn(explanation.toString).toArray
+        println(queryValues.mkString(" "))
+        val matchedQuery = queryValues.map(x=>regExQueryExtract.replaceAllIn(x.toString(),""))
+        searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits (i).score + " " + matchedQuery.mkString ("Array(", ", ", ")") + "\n"
+      }
     }
     logger.stopTime ()
     logger.logWritter ("info", "Execution time for searchIndex is  " + logger.getTime + " ms")
@@ -156,7 +182,7 @@ class LuceneSearchEngine extends Indexer {
       case "wildcardquery" | "wildcard query" =>
         // wildcard characters are *,?
         val term = new Term ("content", queryStr)
-        query = new WildcardQuery (term)
+        query = new WildcardQuery(term)
       case "prefixquery" | "prefix query" =>
         // searches the query which matches the given prefix
         val term = new Term ("content", queryStr)
@@ -168,8 +194,8 @@ class LuceneSearchEngine extends Indexer {
         }
       case "fuzzyquery" | "fuzzy query" =>
         // search based on the similarities
-        val term = new Term ("content", queryStr + "^1")
-        query = new FuzzyQuery (term, 2, 0, 3, false)
+        val term = new Term ("content", queryStr)
+        query = new FuzzyQuery (term, 2, 0, 3, true)
       case "andquery" | "and query" =>
         // search query based on the two or more quries must present in the file like AND operator
         val queryArr = queryStr.split ("@@")
@@ -245,28 +271,6 @@ object LuceneSearchEngineObj extends App {
       case _ => println ("please select any of the given items")
     }
   }
-
-  //  println (lucene.createIndexFiles ("dataFiles",canRemoveOldIndex = true))
-  //  println(lucene.searchIndex("cancer","term query"))
-  //  println (lucene.searchIndex("health","term Query"))
-  //  println("term query")
-  //  println("*"*50)
-  //  println (lucene.searchIndex("he?rt","wildcard Query"))
-  //  println("wildcard query")
-  //  println("*"*50)
-  //  println (lucene.searchIndex("Hea","prefix Query"))
-  //  println("prefix query")
-  //  println("*"*50)
-  //  println (lucene.searchIndex("health","fuzzy Query"))
-  //  println("fuzzy query")
-  //  println("*"*50)
-  //  println (lucene.searchIndex("immune~system","phrase Query"))
-  //  println("phrase query")
-  //  println("*"*50)
-  //  println (lucene.searchIndex("blood@@tumor","and Query"))
-  //  println("and query")
-  //  println("*"*50)
-  //  println (lucene.searchIndex("leg##stomach","or Query"))
 }
 
 
