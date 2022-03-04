@@ -9,58 +9,51 @@ import org.apache.lucene.util.BytesRef
 import java.io.{File, FileNotFoundException}
 import java.nio.file.Paths
 import java.util.InputMismatchException
+import javax.swing.text.Document
+import scala.io.StdIn.readLine
 
 class LuceneSearchEngine extends Indexer {
 
-  private final val MAXHITS = 10
-
   /**
    * get the directory of data
-   * @param filePath path of the directory
-   * @param canRemoveOldIndex remove index or not
+   *
+   * @param filePath  path of the directory
+   * @param indexDir index directory default is indexDir
    */
-  def createIndexFiles(filePath: String,canRemoveOldIndex:Boolean): String = {
+  def createIndexFiles(filePath: String,indexDir:String="indexDir"): String = {
     val logger = new Logger
     logger.logWritter ("info", "Entered in to getDataDirectory function in LuceneSearchEngine class")
     logger.startTime ()
-    if (filePath.nonEmpty) {
+    if (filePath.trim.nonEmpty) {
       val dataFile = new File (filePath)
       if (checkFiles (dataFile)) {
-        try{
-          index(dataFile,canRemoveOldIndex)
+        try {
+          index (dataFile, indexDir)
+          "indexing completed"
         }
         catch {
-          case _:FileNotFoundException => return "check the data"
+          case _: FileNotFoundException => "check the data"
         }
-
+      } else {
+        removeIndexDir(indexDir)
+        "data files not found"
       }
-      else {
-        removeIndexDir ()
-        logger.logWritter ("error", "Please check the directory")
-      }
+    }
+    else {
+      removeIndexDir(indexDir)
+      logger.logWritter ("error", "data not found")
       logger.stopTime ()
       logger.logWritter ("info", "Execution time for getDataDirectory is  " + logger.getTime + " ms")
       logger.logWritter ("info", "Exiting from getDataDirectory function in LuceneSearchEngine class")
-      "index file created"
-    }
-    else {
-      removeIndexDir ()
-      logger.logWritter ("error", "file path is empty")
-      logger.stopTime ()
-      logger.logWritter ("info", "Execution time for getDataDirectory is  " + logger.getTime+ " ms")
-      logger.logWritter ("info", "Exiting from getDataDirectory function in LuceneSearchEngine class")
-      try {
-        throw new NullPointerException
-      }
-      catch {
-        case _: NullPointerException => "file path is empty"
-      }
+      "data files empty"
     }
   }
 
 
+
   /**
    * check the file permission and the file exists or not
+   *
    * @param file as File
    * @return true or false
    */
@@ -68,15 +61,16 @@ class LuceneSearchEngine extends Indexer {
     val logger = new Logger
     logger.logWritter ("info", "Entered in to checkFiles function in LuceneSearchEngine class")
     logger.startTime ()
-    if (!file.isHidden && file.exists () && file.canRead && file.listFiles ().length != 0) {
+    if (!file.isHidden && file.exists () && file.canRead && file.listFiles().length != 0) {
       logger.stopTime ()
-      logger.logWritter ("info", "Execution time for checkFiles is  " + logger.getTime+ " ms")
+      logger.logWritter ("info", "Execution time for checkFiles is  " + logger.getTime + " ms")
       logger.logWritter ("info", "Exiting from checkFiles function in LuceneSearchEngine class")
       true
     }
     else {
       logger.stopTime ()
-      logger.logWritter ("info", "Execution time for checkFiles is  " + logger.getTime+ " ms")
+      logger.logWritter ("info", "Execution time for checkFiles is  " + logger.getTime + " ms")
+      logger.logWritter ("error", "check the data directory")
       logger.logWritter ("info", "Exiting from checkFiles function in LuceneSearchEngine class")
       false
     }
@@ -84,14 +78,15 @@ class LuceneSearchEngine extends Indexer {
 
   /**
    * search the text with it index and returns the files containing the text
+   *
    * @param queryStr query text for searching
    * @return
    */
-  def searchIndex(queryStr: String,queryType:String): String = {
+  def searchIndex(queryStr: String, queryType: String,indexDir:String="indexDir"): String = {
     val logger = new Logger
     logger.logWritter ("info", "Entered in to searchIndex function in LuceneSearchEngine class")
     logger.startTime ()
-    val directory = FSDirectory.open (Paths.get (INDEXDIRECTORYPATH))
+    val directory = FSDirectory.open (Paths.get (indexDir))
     var indexReader: DirectoryReader = null
     try {
       // reads the indexes files from the index directory
@@ -102,9 +97,10 @@ class LuceneSearchEngine extends Indexer {
     }
     // creating an instance of Index Searcher
     val searcher = new IndexSearcher (indexReader)
+
     var query: Query = null
     try {
-//      val searchType = getQueryType
+      //      val searchType = getQueryType
       query = getQuery (queryType.toLowerCase, queryStr.toLowerCase)
     }
     catch {
@@ -114,7 +110,7 @@ class LuceneSearchEngine extends Indexer {
     var topDocs: TopDocs = null
     try {
       // search the query in the index files
-      topDocs = searcher.search (query, MAXHITS)
+      topDocs = searcher.search (query, 100)
     }
     catch {
       case _: NullPointerException => return "search query is empty"
@@ -124,13 +120,13 @@ class LuceneSearchEngine extends Indexer {
     for (i <- 0 until hits.length) {
       val docId = hits (i).doc
       val explanation = searcher.explain (query, docId)
-      val d = searcher.doc (docId)
-      val getQuery = """content:[a-z 0-9]+""".r
-      val searchedQuery = getQuery.findAllMatchIn(explanation.toString).toArray
-      searchedFiles += s"${i + 1}." + d.get("fileName") + " Score :" + hits(i).score * 100 + " " + searchedQuery.mkString("Array(", ", ", ")") +"\n"
+      val d = searcher.doc(docId)
+      val getQuery = """content:["a-z?*]+ ?""".r
+      val searchedQuery = getQuery.findAllMatchIn (explanation.toString).toArray
+      searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits (i).score + " " + searchedQuery.mkString ("Array(", ", ", ")").stripMargin + "\n"
     }
     logger.stopTime ()
-    logger.logWritter ("info", "Execution time for searchIndex is  " + logger.getTime+ " ms")
+    logger.logWritter ("info", "Execution time for searchIndex is  " + logger.getTime + " ms")
     logger.logWritter ("info", "Exiting from searchIndex function in LuceneSearchEngine class")
     logger.logWritter ("info", "total hits founded is " + hits.length)
     if (searchedFiles.isEmpty) {
@@ -142,6 +138,7 @@ class LuceneSearchEngine extends Indexer {
 
   /**
    * create query from the query type
+   *
    * @param queryType type of query
    * @param queryStr  searching string
    * @return
@@ -155,66 +152,66 @@ class LuceneSearchEngine extends Indexer {
       case "termquery" | "term query" =>
         // search for the term in the file
         val term = new Term ("content", queryStr)
-        query = new TermQuery(term)
+        query = new TermQuery (term)
       case "wildcardquery" | "wildcard query" =>
         // wildcard characters are *,?
         val term = new Term ("content", queryStr)
-        query = new WildcardQuery(term)
+        query = new WildcardQuery (term)
       case "prefixquery" | "prefix query" =>
         // searches the query which matches the given prefix
         val term = new Term ("content", queryStr)
-        query = new PrefixQuery(term)
+        query = new PrefixQuery (term)
       case "phrasequery" | "phrase query" =>
-        val queryArr = queryStr.split("~")
-        if(queryArr.length > 1){
-          query = new PhraseQuery (1, "content", new BytesRef (queryArr(0)), new BytesRef (queryArr(1)))
+        val queryArr = queryStr.split ("~")
+        if (queryArr.length > 1) {
+          query = new PhraseQuery (1, "content", new BytesRef (queryArr (0)), new BytesRef (queryArr (1)))
         }
       case "fuzzyquery" | "fuzzy query" =>
         // search based on the similarities
-        val term = new Term("content", queryStr)
-        query = new FuzzyQuery(term,2)
-        println(query)
-      case "andquery" | "and query"=>
+        val term = new Term ("content", queryStr + "^1")
+        query = new FuzzyQuery (term, 2, 0, 3, false)
+      case "andquery" | "and query" =>
         // search query based on the two or more quries must present in the file like AND operator
         val queryArr = queryStr.split ("@@")
-        query = getAndOrQuery(queryArr,isAndQuery = true)
+        query = getAndOrQuery (queryArr, isAndQuery = true)
       case "orquery" | "or query" =>
         // search any one of query presents in the file
-        val queryArr = queryStr.split("##")
-          query = getAndOrQuery(queryArr)
+        val queryArr = queryStr.split ("##")
+        query = getAndOrQuery (queryArr)
       case _ => throw new InputMismatchException ()
     }
     logger.stopTime ()
-    logger.logWritter ("info", "Execution time for getQuery is  " + logger.getTime+ " ms")
+    logger.logWritter ("info", "Execution time for getQuery is  " + logger.getTime + " ms")
     logger.logWritter ("info", "Exiting from getQuery function in LuceneSearchEngine class")
     query
   }
 
   /**
    * create a boolean query of multiple words must present in the file
-   * @param queryArr Array of search query
+   *
+   * @param queryArr   Array of search query
    * @param isAndQuery true or false
    * @return Query of words
    */
-  private def getAndOrQuery(queryArr:Array[String],isAndQuery:Boolean = false):Query={
+  private def getAndOrQuery(queryArr: Array[String], isAndQuery: Boolean = false): Query = {
     val logger = new Logger
     logger.logWritter ("info", "Entered in to getAndOrQuery function in LuceneSearchEngine class")
     logger.startTime ()
-    val builder = new BooleanQuery.Builder()
-    for(i <- queryArr.indices){
-      val term = new Term("content",queryArr(i).toLowerCase)
+    val builder = new BooleanQuery.Builder ()
+    for (i <- queryArr.indices) {
+      val term = new Term ("content", queryArr (i).toLowerCase)
       val query = new TermQuery (term)
-      if(isAndQuery){
-        builder.add(query,BooleanClause.Occur.MUST)
+      if (isAndQuery) {
+        builder.add (query, BooleanClause.Occur.MUST)
       }
       else {
-        builder.add(query,BooleanClause.Occur.SHOULD)
+        builder.add (query, BooleanClause.Occur.SHOULD)
       }
 
     }
-    val query:Query = builder.build()
+    val query: Query = builder.build ()
     logger.stopTime ()
-    logger.logWritter ("info", "Execution time for getAndOrQuery is  " + logger.getTime+ " ms")
+    logger.logWritter ("info", "Execution time for getAndOrQuery is  " + logger.getTime + " ms")
     logger.logWritter ("info", "Exiting from getAndOrQuery function in LuceneSearchEngine class")
     query
   }
@@ -222,24 +219,58 @@ class LuceneSearchEngine extends Indexer {
 
 object LuceneSearchEngineObj extends App {
   val lucene = new LuceneSearchEngine
-  println (lucene.createIndexFiles ("dataFiles",canRemoveOldIndex = true))
-  println (lucene.searchIndex("tumor","term query"))
-  println("term query")
-  println("*"*50)
-  println (lucene.searchIndex("he?rt","wildcard Query"))
-  println("wildcard query")
-  println("*"*50)
-  println (lucene.searchIndex("Hea","prefix Query"))
-  println("prefix query")
-  println("*"*50)
-  println (lucene.searchIndex("health","fuzzy Query"))
-  println("fuzzy query")
-  println("*"*50)
-  println (lucene.searchIndex("immune~system","phrase Query"))
-  println("phrase query")
-  println("*"*50)
-  println (lucene.searchIndex("blood@@tumor","and Query"))
-  println("and query")
-  println("*"*50)
-  println (lucene.searchIndex("leg##stomach","or Query"))
+  var trueOrFalse = true
+  while (trueOrFalse) {
+    println ("Do you want Search only or Index the data and Search\n1.Index and search\n2.Search\n3.Exit")
+    val userInput = readLine ("select any of the given items:\n")
+    userInput.trim match {
+      case "1" =>
+        val dataPath = readLine ("data file path: ")
+        val query = readLine ("please give the query: ")
+        val queryTpe = readLine ("please give the query type: ")
+        lucene.createIndexFiles (dataPath)
+        println (lucene.searchIndex (query, queryTpe))
+      case "2" =>
+        val indexDirectory = readLine("please give the index file or use the Existing directory\n1.New Indexed Directory\n2.Use Existing Directory\n") match {
+          case "1" =>
+            readLine("Please give the indexed files directory: ")
+          case "2" => "indexDir"
+          case _ => ""
+        }
+        val query = readLine ("please give the query: ")
+        val queryTpe = readLine ("please give the query type: ")
+        println (lucene.searchIndex (query, queryTpe,indexDirectory.trim))
+      case "3" =>
+        trueOrFalse = false
+      case _ => println ("please select any of the given items")
+    }
+  }
+
+  //  println (lucene.createIndexFiles ("dataFiles",canRemoveOldIndex = true))
+  //  println(lucene.searchIndex("cancer","term query"))
+  //  println (lucene.searchIndex("health","term Query"))
+  //  println("term query")
+  //  println("*"*50)
+  //  println (lucene.searchIndex("he?rt","wildcard Query"))
+  //  println("wildcard query")
+  //  println("*"*50)
+  //  println (lucene.searchIndex("Hea","prefix Query"))
+  //  println("prefix query")
+  //  println("*"*50)
+  //  println (lucene.searchIndex("health","fuzzy Query"))
+  //  println("fuzzy query")
+  //  println("*"*50)
+  //  println (lucene.searchIndex("immune~system","phrase Query"))
+  //  println("phrase query")
+  //  println("*"*50)
+  //  println (lucene.searchIndex("blood@@tumor","and Query"))
+  //  println("and query")
+  //  println("*"*50)
+  //  println (lucene.searchIndex("leg##stomach","or Query"))
 }
+
+
+
+
+
+

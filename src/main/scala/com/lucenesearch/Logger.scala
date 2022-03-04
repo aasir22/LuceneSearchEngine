@@ -26,7 +26,6 @@ class Logger {
 
   /**
    * starts the stopwatch
-   * @return
    */
   def startTime():Unit={
     stopWatch.start()
@@ -34,7 +33,6 @@ class Logger {
 
   /**
    * stops the stopwatch
-   * @return
    */
   def stopTime():Unit={
     stopWatch.stop()
@@ -42,7 +40,7 @@ class Logger {
 
   /**
    * get the time between start and stop
-   * @return
+   * @return time between start and stop
    */
   def getTime:Long={
     stopWatch.getTime()
