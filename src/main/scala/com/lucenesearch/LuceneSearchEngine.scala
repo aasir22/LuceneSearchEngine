@@ -2,12 +2,13 @@ package com.lucenesearch
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.index.{DirectoryReader, IndexNotFoundException}
-import org.apache.lucene.search.{BooleanClause, BooleanQuery, FuzzyQuery, IndexSearcher, Matches, MatchesIterator, PhraseQuery, PrefixQuery, Query, TermQuery, TopDocs, WildcardQuery}
+import org.apache.lucene.search.{BooleanClause, BooleanQuery, FuzzyQuery, IndexSearcher, Matches, MatchesIterator, MultiTermQuery, PhraseQuery, PrefixQuery, Query, TermQuery, TopDocs, WildcardQuery}
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.search.uhighlight.UnifiedHighlighter
-import org.apache.lucene.search.highlight.QueryTermExtractor
+import org.apache.lucene.search.highlight.{Highlighter, QueryScorer, QueryTermExtractor}
+
 import java.io.{File, FileNotFoundException}
 import java.nio.file.Paths
 import java.util
@@ -117,38 +118,48 @@ class LuceneSearchEngine extends Indexer {
     catch {
       case _: NullPointerException => return "search query is empty"
     }
-    val arr = Array("wildcard query","wildcardquery","prefixquery","prefix query","phrase query","phrasequery")
+    val arr = Array("wildcard query","wildcardquery","prefixquery","prefix query")
     val hits = topDocs.scoreDocs
     var searchedFiles = ""
     for (i <- 0 until hits.length) {
       val docId = hits (i).doc
       val explanation = searcher.explain (query, docId)
-//      println(explanation)
-      val d = searcher.doc(docId)
-//      val regExplain = """content:[A-Za-z]+""".r
-//      val regExQueryExtract = """content:""".r
-//      val queryValues = regExplain.findAllMatchIn(explanation.toString).toArray
-//      val matchedQuery = queryValues.map(x=>regExQueryExtract.replaceAllIn(x.toString(),""))
-//      searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits (i).score + " " + matchedQuery.mkString ("Array(", ", ", ")") + "\n"
-
+      val document = searcher.doc(docId)
       if(arr.contains(queryType)){
         val analyzer = new StandardAnalyzer ()
         val highlighter = new UnifiedHighlighter(searcher, analyzer)
         val fragments = highlighter.highlight("content",query,topDocs)
         val arrBuffer = new ArrayBuffer[String]
         val regExOfFragments = """<[/b]+>""".r
-        for (f <- fragments) {
-          arrBuffer.addOne(regExOfFragments.replaceAllIn(f,"").toArray.mkString)
-        }
-        searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits (i).score + " " + arrBuffer.distinct.toArray.mkString ("Array(", ", ", ")") + "\n"
+        val scorer = new QueryScorer(query, "content")
+        println(scorer.getFragmentScore)
+        arrBuffer.addOne(regExOfFragments.replaceAllIn(fragments(i),"").toArray.mkString)
+//        for (f <- fragments) {
+//          arrBuffer.addOne(regExOfFragments.replaceAllIn(f,"").toArray.mkString)
+//        }
+////        var frags = fragments.toList
+//
+//        var j = 0
+//        while ( {
+//          j < topDocs.scoreDocs.length - 1
+//        }) {
+//          val docid = topDocs.scoreDocs(j).doc
+//          val filePath = document.get ("fileName")
+//          println(filePath)
+//          println(frags(j))
+//          frags = frags.tail
+//          j += 1
+//        }
+        analyzer.close()
+        searchedFiles += s"${i + 1}." + document.get ("fileName") + " Score :" + hits (i).score + " " + arrBuffer.distinct.toArray.mkString ("Array(", ", ", ")") + "\n"
       }
       else {
-        val regExplain = """content:[A-Za-z]+""".r
-        val regExQueryExtract = """content:""".r
+        val regExplain = """content:["a-z?* ]+ ?""".r
+        val regExQueryExtract = """content:|"|in""".r
         val queryValues = regExplain.findAllMatchIn(explanation.toString).toArray
-        println(queryValues.mkString(" "))
-        val matchedQuery = queryValues.map(x=>regExQueryExtract.replaceAllIn(x.toString(),""))
-        searchedFiles += s"${i + 1}." + d.get ("fileName") + " Score :" + hits (i).score + " " + matchedQuery.mkString ("Array(", ", ", ")") + "\n"
+        val matchedQuery = queryValues.map(x=>regExQueryExtract.replaceAllIn(x.toString().trim,""))
+        searchedFiles += s"${i + 1}." + document.get ("fileName") + " Score :" + hits (i).score + " " + matchedQuery.mkString ("Array(", ", ", ")") + "\n"
+
       }
     }
     logger.stopTime ()
